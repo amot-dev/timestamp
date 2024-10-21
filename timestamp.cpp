@@ -19,16 +19,24 @@ namespace fs = std::filesystem;
 void display_proposed_changes(const std::vector<ExifFile>& files, bool first_display) {
     if (!first_display) std::cout << "\n";
 
-    std::cout << "Files to rename:" << std::endl;
+    std::cout << CYAN << "Files to rename:" << RESET << std::endl;
     for (size_t i = files.size(); i > 0; --i) {
         std::string current_name = files[i-1].get_path().filename().string();
         std::string proposed_name = files[i-1].get_proposed_name();
 
-        std::cout << i << "\t" << current_name << " -> " << proposed_name;
+        std::cout << i << "\t" << current_name << " -> ";
 
-        if (files[i-1].is_clashing()) std::cout << RED << " (clashing)" << RESET << std::endl;
+        if (files[i-1].is_skipped()) {
+            std::cout << current_name;
+        }
+        else {
+            std::cout << proposed_name;
+        }
+
+        if (files[i-1].is_clashing()) std::cout << RED << " (clashing)" << RESET;
+
+        if (files[i-1].is_skipped()) std::cout << YELLOW << " (skipped)" << RESET << std::endl;
         else if (current_name == proposed_name) std::cout << GRAY << " (no change)" << RESET << std::endl;
-        else if (files[i-1].is_skipped()) std::cout << YELLOW << " (skipped)" << RESET << std::endl;
         else std::cout << std::endl;
     }
 }
@@ -47,15 +55,16 @@ bool has_clashes(const std::shared_ptr<std::map<std::string, int>>& name_count) 
 void rename_files(std::vector<ExifFile>& files) {
     int skip_count = 0;
     for (auto file : files) {
-        if (file.is_skipped()) {
-            skip_count++;
-            continue;
-        }
-
-        file.rename();
+        if (!file.rename()) skip_count++;
     }
     int rename_count = files.size() - skip_count;
-    std::cout << "Renamed " << rename_count << " files. Skipped " << skip_count << " files." << std::endl;
+    std::cout << CYAN
+              << "Renamed " << rename_count << " "
+              << (rename_count == 1 ? "file" : "files") << ". "
+              << "Skipped " << skip_count << " "
+              << (skip_count == 1 ? "file" : "files") << "."
+              << RESET
+              << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -73,14 +82,14 @@ int main(int argc, char* argv[]) {
                 files.push_back(file);
             }
             else {
-                std::cout << YELLOW << "[Warning]: " << RESET << "Ignoring file without valid date " << file.get_path().filename().string() << std::endl;
+                std::cout << YELLOW << "[Warning] " << RESET << "Ignoring file without valid date " << file.get_path().filename().string() << std::endl;
             }
         }
     }
 
     // Check if empty
     if (files.empty()) {
-        std::cout << "No files found in the specified directory." << std::endl;
+        std::cout << CYAN << "No files found in the specified directory." << RESET << std::endl;
         return 0;
     }
 
