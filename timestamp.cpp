@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <set>
 #include <sstream>
 #include <string>
@@ -21,7 +22,8 @@ void display_proposed_changes(const std::vector<ExifFile>& files) {
 
         std::cout << i << "\t" << current_name << " -> " << proposed_name;
 
-        if (current_name == proposed_name) std::cout << " (no change)" << std::endl;
+        if (files[i-1].is_clashing()) std::cout << " (clashing)" << std::endl;
+        else if (current_name == proposed_name) std::cout << " (no change)" << std::endl;
         else if (files[i-1].is_skipped()) std::cout << " (skipped)" << std::endl;
         else std::cout << std::endl;
     }
@@ -45,18 +47,22 @@ void rename_files(std::vector<ExifFile>& files) {
 int main(int argc, char* argv[]) {
     std::string directory = (argc > 1) ? argv[1] : "."; // Default to current directory
     std::vector<ExifFile> files;
+    auto proposed_name_counts_ptr = std::make_shared<std::map<std::string, int>>();
 
     // Collect files from the specified directory
     for (const auto& entry : fs::directory_iterator(directory)) {
         if (fs::is_regular_file(entry)) {
-            ExifFile file = ExifFile(entry.path());
+            ExifFile file = ExifFile(entry.path(), proposed_name_counts_ptr);
+
+            // std::cout << "file: " << file.get_path() << " name: " << file.get_proposed_name() << std::endl;
+            // std::cout << "empty? " << file.is_skipped() << std::endl;
             
             // Ignore files without valid EXIF dates
             if (!file.is_skipped()) {
-                files.push_back(entry.path());
+                files.push_back(file);
             }
             else {
-                std::cout << "Warning: Ignoring file without valid date " << file.get_path().filename().string() << std::endl;
+                std::cout << "[Warning]: Ignoring file without valid date " << file.get_path().filename().string() << std::endl;
             }
         }
     }

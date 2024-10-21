@@ -4,8 +4,7 @@
 #include <regex>
 #include <iostream>
 
-ExifFile::ExifFile(fs::path path) : current_exif_tag{DEFAULT_EXIF_TAG}, path{path} {
-    this->skip = false;
+ExifFile::ExifFile(fs::path path, std::shared_ptr<std::map<std::string, int>> proposed_name_counts_ptr) : path{path}, current_exif_tag{DEFAULT_EXIF_TAG}, proposed_name_counts_ptr{proposed_name_counts_ptr} {
     this->generate_new_name(DEFAULT_EXIF_TAG);
 }
 
@@ -13,7 +12,9 @@ fs::path ExifFile::get_path() const { return this->path; }
 
 std::string ExifFile::get_proposed_name() const { return this->proposed_name; }
 
-bool ExifFile::is_skipped() const { return this->skip; }
+bool ExifFile::is_skipped() const { return this->proposed_name.empty(); }
+
+bool ExifFile::is_clashing() const { return (*this->proposed_name_counts_ptr)[this->proposed_name] > 1; }
 
 void ExifFile::edit_proposed_name() {
     std::cout << "\n\nPossible names for " << this->path.filename().string() << std::endl;
@@ -57,33 +58,27 @@ void ExifFile::edit_proposed_name() {
 
         if (selected.first == "Custom") {
             std::cout << "Enter a custom name: ";
-            std::getline(std::cin, this->proposed_name);
-            if (this->proposed_name == "") this->skip = true;
-            else this->skip = false;
+            std::string new_name;
+            std::getline(std::cin, new_name);
+            this->set_proposed_name(new_name);
         }
-        else if (selected.first == "Skip") {
-            this->proposed_name = "";
-            this->skip = true;
-        }
-        else {
-            this->proposed_name = selected.second;
-            if (selected.second == "") this->skip = true;
-            else this->skip = false;
-        }
+        else if (selected.first == "Skip") this->set_proposed_name("");
+        else this->set_proposed_name(selected.second);
         
         break;
     }
 }
 
 void ExifFile::rename() {
-    if (this->skip) return;
+    if (this->is_skipped()) return;
 
     try {
-        std::cout << "attempting rename" << std::endl;
-        this->path.replace_filename(this->proposed_name);
+        auto new_path = this->path;
+        new_path.replace_filename(this->proposed_name);
+        fs::rename(this->path, new_path);
     }
     catch (const fs::filesystem_error& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+        std::cerr << "[Error]: " << e.what() << std::endl;
     }
 }
 
@@ -119,15 +114,27 @@ std::string ExifFile::get_exif_date(const std::string& exif_tag) {
     return "";
 }
 
+void ExifFile::set_proposed_name(const std::string& proposed_name) {
+    // Decrement old name
+    (*this->proposed_name_counts_ptr)[this->proposed_name]--;
+    if ((*this->proposed_name_counts_ptr)[this->proposed_name] == 0) {
+        this->proposed_name_counts_ptr->erase(this->proposed_name);  // Clean up the map when the count reaches 0
+    }
+
+    // Change name
+    this->proposed_name = proposed_name;
+
+    // If not empty, set count for new name
+    if (!proposed_name.empty()) (*this->proposed_name_counts_ptr)[proposed_name]++;
+}
+
 void ExifFile::generate_new_name(const std::string& exif_tag) {
     std::string extension = this->path.extension();
-    this->proposed_name = get_exif_date(exif_tag);
+    std::string new_name = get_exif_date(exif_tag);
 
-    if (this->proposed_name.empty()) {
-        this->proposed_name = "";
-        this->skip = true;
-    }
+    if (new_name.empty()) this->set_proposed_name("");
     else {
-        this->proposed_name += extension;
+        new_name += extension;
+        this->set_proposed_name(new_name);
     }
 }
