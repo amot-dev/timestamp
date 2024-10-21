@@ -4,6 +4,8 @@
 #include <regex>
 #include <iostream>
 
+#include "color.h"
+
 ExifFile::ExifFile(fs::path path, std::shared_ptr<std::map<std::string, int>> proposed_name_counts_ptr) : path{path}, current_exif_tag{DEFAULT_EXIF_TAG}, proposed_name_counts_ptr{proposed_name_counts_ptr} {
     this->generate_new_name(DEFAULT_EXIF_TAG);
 }
@@ -46,10 +48,19 @@ void ExifFile::edit_proposed_name() {
 
         size_t selection;
         std::cin >> selection;
+
+        // Check for input failure
+        if (std::cin.fail()) {
+            std::cin.clear(); // Clear the error state
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignore the invalid input
+            std::cout << RED << "[ERROR]: " << RESET << "Invalid choice" << std::endl;
+            continue;
+        }
+
         std::cin.ignore();
 
         if (selection < 1 || selection > possible_names.size()) {
-            std::cout << "Invalid choice. Please try again." << std::endl;
+            std::cout << RED << "[ERROR]: " << RESET << "Invalid choice" << std::endl;
             continue;
         }
         
@@ -78,7 +89,7 @@ void ExifFile::rename() {
         fs::rename(this->path, new_path);
     }
     catch (const fs::filesystem_error& e) {
-        std::cerr << "[Error]: " << e.what() << std::endl;
+        std::cerr << RED << "[Error]: " << RESET << e.what() << std::endl;
     }
 }
 

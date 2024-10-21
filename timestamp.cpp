@@ -1,4 +1,5 @@
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -9,12 +10,15 @@
 #include <string>
 #include <vector>
 
+#include "color.h"
 #include "exif_file.h"
 
 namespace fs = std::filesystem;
 
 // Display proposed file name changes
-void display_proposed_changes(const std::vector<ExifFile>& files) {
+void display_proposed_changes(const std::vector<ExifFile>& files, bool first_display) {
+    if (!first_display) std::cout << "\n";
+
     std::cout << "Files to rename:" << std::endl;
     for (size_t i = files.size(); i > 0; --i) {
         std::string current_name = files[i-1].get_path().filename().string();
@@ -22,11 +26,21 @@ void display_proposed_changes(const std::vector<ExifFile>& files) {
 
         std::cout << i << "\t" << current_name << " -> " << proposed_name;
 
-        if (files[i-1].is_clashing()) std::cout << " (clashing)" << std::endl;
-        else if (current_name == proposed_name) std::cout << " (no change)" << std::endl;
-        else if (files[i-1].is_skipped()) std::cout << " (skipped)" << std::endl;
+        if (files[i-1].is_clashing()) std::cout << RED << " (clashing)" << RESET << std::endl;
+        else if (current_name == proposed_name) std::cout << GRAY << " (no change)" << RESET << std::endl;
+        else if (files[i-1].is_skipped()) std::cout << YELLOW << " (skipped)" << RESET << std::endl;
         else std::cout << std::endl;
     }
+}
+
+// Check for any clashes
+bool has_clashes(const std::shared_ptr<std::map<std::string, int>>& name_count) {
+    for (const auto& entry : *name_count) {
+        if (entry.second > 1) {
+            return true; // Found a clash
+        }
+    }
+    return false; // No clashes found
 }
 
 // Rename files
@@ -53,35 +67,52 @@ int main(int argc, char* argv[]) {
     for (const auto& entry : fs::directory_iterator(directory)) {
         if (fs::is_regular_file(entry)) {
             ExifFile file = ExifFile(entry.path(), proposed_name_counts_ptr);
-
-            // std::cout << "file: " << file.get_path() << " name: " << file.get_proposed_name() << std::endl;
-            // std::cout << "empty? " << file.is_skipped() << std::endl;
             
             // Ignore files without valid EXIF dates
             if (!file.is_skipped()) {
                 files.push_back(file);
             }
             else {
-                std::cout << "[Warning]: Ignoring file without valid date " << file.get_path().filename().string() << std::endl;
+                std::cout << YELLOW << "[Warning]: " << RESET << "Ignoring file without valid date " << file.get_path().filename().string() << std::endl;
             }
         }
     }
 
-
+    // Check if empty
     if (files.empty()) {
         std::cout << "No files found in the specified directory." << std::endl;
         return 0;
     }
 
-    while(true) {
-        display_proposed_changes(files);
+    // Sort in reverse alphabetical order (will be shown in alphabetical order)
+    std::sort(files.begin(), files.end(), [](const ExifFile& a, const ExifFile& b) {
+        return a.get_path() > b.get_path(); // Reverse order based on paths
+    });
 
-        std::cout << "\nOperations to edit (e.g., '1 2 3', '1-3', '^4'): ";
+    bool first_loop = true;
+    bool show_clash_error = false;
+    while(true) {
+        display_proposed_changes(files, first_loop);
+        first_loop = false;
+
+        if (show_clash_error) {
+            std::cout << "\n" << RED << "[Error]: " << RESET << "Please resolve clashes before continuing" << std::endl;
+            show_clash_error = false;
+        }
+        else std::cout << std::endl;
+
+        std::cout << "Operations to edit (e.g., '1 2 3', '1-3', '^4'): ";
         std::string input;
         std::getline(std::cin, input);
 
         // Exit the loop if no options are selected
         if (input.empty()) {
+            // ...unless there are clashes
+            if (has_clashes(proposed_name_counts_ptr)) {
+                show_clash_error = true;
+                continue;
+            }
+
             break;
         }
 
@@ -116,7 +147,7 @@ int main(int argc, char* argv[]) {
                 files[index - 1].edit_proposed_name();
             }
         }
-        std::cout << "\n" << std::endl;
+        std::cout << std::endl;
     }
 
     // Confirm renaming
