@@ -6,6 +6,14 @@
 #include <vector>
 
 #define DEFAULT_EXIF_TAG "FileModifyDate"
+
+#define EXIF_MEDIA_MODIFY_DATE "MediaModifyDate"
+#define EXIF_MEDIA_CREATE_DATE "MediaCreateDate"
+#define EXIF_FILE_MODIFY_DATE "FileModifyDate"
+#define EXIF_FILE_ACCESS_DATE "FileAccessDate"
+#define EXIF_MODIFY_DATE "ModifyDate"
+#define EXIF_CREATE_DATE "CreateDate"
+#define EXIF_DATE_TIME_ORIGINAL "DateTimeOriginal"
 #define VALID_EXIF_TAG_COUNT 7
 
 namespace fs = std::filesystem;

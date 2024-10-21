@@ -95,13 +95,13 @@ void ExifFile::rename() {
 
 // to be displayed in reverse order
 const std::array<std::string, VALID_EXIF_TAG_COUNT> ExifFile::valid_exif_tags = {
-    "MediaModifyDate",
-    "MediaCreateDate",
-    "FileModifyDate",
-    "FileAccessDate",
-    "ModifyDate",
-    "CreateDate",
-    "DateTimeOriginal",
+    EXIF_MEDIA_MODIFY_DATE,
+    EXIF_MEDIA_CREATE_DATE,
+    EXIF_FILE_MODIFY_DATE,
+    EXIF_FILE_ACCESS_DATE,
+    EXIF_MODIFY_DATE,
+    EXIF_CREATE_DATE,
+    EXIF_DATE_TIME_ORIGINAL
 };
 
 std::string ExifFile::run_command(const std::string& command) {
