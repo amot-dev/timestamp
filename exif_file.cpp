@@ -1,18 +1,20 @@
 #include "exif_file.h"
 
 #include <array>
-#include <regex>
+#include <format>
 #include <iostream>
+#include <regex>
 
 #include "color.h"
+#include "utility.h"
 
 ExifFile::ExifFile(fs::path path, std::shared_ptr<std::map<std::string, int>> proposed_name_counts_ptr) : path{path}, proposed_name_counts_ptr{proposed_name_counts_ptr} {
     std::string extension = this->path.extension();
-    std::string new_name = get_exif_date(DEFAULT_EXIF_TAG);
+    std::string new_name = get_metadata_date(DEFAULT_EXIF_TAG);
 
     // If no date could be set with default tag, try fallback tag
     if (new_name.empty()) {
-        new_name = get_exif_date(FALLBACK_EXIF_TAG);
+        new_name = get_metadata_date(FALLBACK_EXIF_TAG);
 
         // Give up after failing fallback (should never happen in theory)
         if (new_name.empty()) {
@@ -47,7 +49,7 @@ void ExifFile::edit_proposed_name() {
     possible_names.push_back(std::make_pair("Skip", ""));
     possible_names.push_back(std::make_pair("Custom", ""));
     for (const auto& tag : this->valid_exif_tags) {
-        std::string date = get_exif_date(tag);
+        std::string date = get_metadata_date(tag);
         if (date.empty()) continue;
 
         date += extension;
@@ -132,24 +134,73 @@ const std::array<std::string, VALID_EXIF_TAG_COUNT> ExifFile::valid_exif_tags = 
     EXIF_DATE_TIME_ORIGINAL
 };
 
-std::string ExifFile::run_command(const std::string& command) {
-    std::array<char, 128> buffer;
-    std::string result;
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"), pclose);
-    if (!pipe) throw std::runtime_error("popen() failed!");
-
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-        result += buffer.data();
+std::string ExifFile::get_exif_date(const Exiv2::Image::UniquePtr& media, const std::string& exif_tag) {
+    try {
+        // First try grab Exif.Photo.DateTimeOriginal if available
+        Exiv2::ExifData &exifData = media->exifData();
+        if (!exifData.empty()) {
+            Exiv2::ExifKey dateTimeOriginalKey(exif_tag);
+            Exiv2::ExifData::iterator exifEntry = exifData.findKey(dateTimeOriginalKey);
+            if (exifEntry != exifData.end()) {
+                // TODO: Format time
+                std::cout << "Exif.Photo.DateTimeOriginal = " << exifEntry->value() << std::endl;
+                return "";
+            }
+        }
     }
-    return result;
+    catch(...) {
+        std::cout << RED << "[ERROR] " << RESET "Failed to read EXIF data from " << this->path.filename().string() << std::endl;
+    }
+
+    return "";
 }
 
-std::string ExifFile::get_exif_date(const std::string& exif_tag) {
-    std::string command = "exiftool -" + exif_tag + " \"" + this->path.string() + "\" -d %Y-%m-%d-%H%M-%S -S";
-    std::string output = run_command(command);
-    std::regex date_regex(R"(\d{4}-\d{2}-\d{2}-\d{2}\d{2}-\d{2})");
-    std::smatch match;
-    if (std::regex_search(output, match, date_regex)) return match.str();
+std::string ExifFile::get_xmp_date(const Exiv2::Image::UniquePtr& media, const std::string& xmp_tag) {
+    try {
+        Exiv2::XmpData &xmpData = media->xmpData();
+        if (!xmpData.empty()) {
+            Exiv2::XmpKey modificationDateKey(xmp_tag);
+            Exiv2::XmpData::iterator xmpEntry = xmpData.findKey(modificationDateKey);
+            if (xmpEntry != xmpData.end()) {
+                // Format time
+                auto time = secondsSince1904ToTimePoint(xmpEntry->toInt64());
+                auto rounded_time = std::chrono::time_point_cast<std::chrono::seconds>(time);
+                auto formatted_time = std::format("{:%Y-%m-%d-%H%M-%S}", rounded_time);
+
+                return formatted_time;
+            }
+        }
+    }
+    catch(...) {
+        std::cout << RED << "[ERROR] " << RESET "Failed to read XMP data from " << this->path.filename().string() << std::endl;
+    }
+
+    return "";
+}
+
+std::string ExifFile::get_metadata_date(const std::string& tag) {
+    try {
+        // Load the image or video file
+        Exiv2::Image::UniquePtr media = Exiv2::ImageFactory::open(this->path.string());
+        if (!media.get()) {
+            std::cout << RED << "[ERROR] " << RESET "Cannot open " << this->path.filename().string() << std::endl;
+            return "";
+        }
+
+        // Read the metadata from the file
+        media->readMetadata();
+
+        if (tag.starts_with("Exif.")) return get_exif_date(media, tag);
+        else if (tag.starts_with("Xmp.")) return get_xmp_date(media, tag);
+        else {
+            std::cout << RED << "[ERROR] " << RESET "Invalid tag: " << tag << std::endl;
+            return "";
+        }
+    }
+    catch (...) {
+        std::cout << RED << "[ERROR] " << RESET "Failed to read from " << this->path.filename().string() << std::endl;
+    }
+
     return "";
 }
 

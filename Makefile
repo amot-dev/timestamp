@@ -1,7 +1,7 @@
 # Variables
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra
-LDFLAGS = 
+CXXFLAGS = -std=c++20 -Wall -Wextra
+LDFLAGS = -lexiv2
 SRC = timestamp.cpp exif_file.cpp
 OBJ = $(SRC:.cpp=.o)
 TARGET = timestamp
