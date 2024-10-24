@@ -26,7 +26,7 @@ ExifFile::ExifFile(fs::path path,
     }
     catch(...) {
         // No need to continue if attempting to read metadata once throws exception
-        std::cout << RED << "[ERROR] " << RESET "Failed to read metadata from " << this->path.filename().string() << std::endl;
+        std::cerr << RED << "[ERROR] " << RESET "Failed to read metadata from " << this->path.filename().string() << std::endl;
         return;
     }
 
@@ -98,12 +98,12 @@ void ExifFile::edit_proposed_name() {
             selection = std::stoul(input); // Convert string to unsigned long
         }
         catch (...) {
-            std::cout << RED << "[ERROR] " << RESET << "Invalid choice" << std::endl;
+            std::cerr << RED << "[ERROR] " << RESET << "Invalid choice" << std::endl;
             continue; // Invalid input, continue the loop
         }
 
         if (selection < 1 || selection > possible_names.size()) {
-            std::cout << RED << "[ERROR] " << RESET << "Invalid choice" << std::endl;
+            std::cerr << RED << "[ERROR] " << RESET << "Invalid choice" << std::endl;
             continue; // Invalid range, continue the loop
         }
         
@@ -155,10 +155,10 @@ std::string ExifFile::get_exif_date(const Exiv2::Image::UniquePtr& media, const 
         }
     }
     catch(std::runtime_error& e) {
-        std::cout << RED << "[ERROR] " << RESET << e.what() << std::endl;
+        std::cerr << RED << "[ERROR] " << RESET << e.what() << std::endl;
     }
     catch(...) {
-        std::cout << RED << "[ERROR] " << RESET "Failed to read EXIF data from " << this->path.filename().string() << std::endl;
+        std::cerr << RED << "[ERROR] " << RESET "Failed to read EXIF data from " << this->path.filename().string() << std::endl;
     }
 
     return "";
@@ -178,7 +178,7 @@ std::string ExifFile::get_xmp_date(const Exiv2::Image::UniquePtr& media, const s
         }
     }
     catch(...) {
-        std::cout << RED << "[ERROR] " << RESET "Failed to read XMP data from " << this->path.filename().string() << std::endl;
+        std::cerr << RED << "[ERROR] " << RESET "Failed to read XMP data from " << this->path.filename().string() << std::endl;
     }
 
     return "";
@@ -188,7 +188,7 @@ std::string ExifFile::get_metadata_date(const std::string& tag, const std::strin
     // Load the image or video file
     Exiv2::Image::UniquePtr media = Exiv2::ImageFactory::open(this->path.string());
     if (!media.get()) {
-        std::cout << RED << "[ERROR] " << RESET "Cannot open " << this->path.filename().string() << std::endl;
+        std::cerr << RED << "[ERROR] " << RESET "Cannot open " << this->path.filename().string() << std::endl;
         return "";
     }
 
@@ -198,7 +198,7 @@ std::string ExifFile::get_metadata_date(const std::string& tag, const std::strin
     if (tag.starts_with("Exif.")) return get_exif_date(media, tag, date_format);
     else if (tag.starts_with("Xmp.")) return get_xmp_date(media, tag, date_format);
     else {
-        std::cout << RED << "[ERROR] " << RESET "Invalid tag: " << tag << std::endl;
+        std::cerr << RED << "[ERROR] " << RESET "Invalid tag: " << tag << std::endl;
         return "";
     }
 

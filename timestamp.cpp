@@ -15,7 +15,7 @@ namespace fs = std::filesystem;
 
 // Display proposed file name changes
 void display_proposed_changes(const std::vector<ExifFile>& files, bool first_display) {
-    if (!first_display) std::cout << "\n";
+    if (!first_display) std::cout << std::endl;
 
     std::cout << CYAN << "Files to rename:" << RESET << std::endl;
     for (size_t i = files.size(); i > 0; --i) {
@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
                 print_help();
                 return 0;
             default:
-                std::cout << RED << "[ERROR] " << RESET << "Invalid option. Use -h or --help for usage" << std::endl;
+                std::cerr << RED << "[ERROR] " << RESET << "Invalid option. Use -h or --help for usage" << std::endl;
                 return 1;
         }
     }
@@ -137,13 +137,13 @@ int main(int argc, char* argv[]) {
             directory = argv[i]; // Set the first positional argument as directory
         }
         else {
-            std::cout << RED << "[ERROR] " << RESET << "Unexpected option or argument: " << argv[i] << ". Use -h or --help for usage" << std::endl;
+            std::cerr << RED << "[ERROR] " << RESET << "Unexpected option or argument: " << argv[i] << ". Use -h or --help for usage" << std::endl;
             return 1;
         }
     }
 
     if (force && interactive) {
-        std::cout << YELLOW << "[WARNING] " << RESET << "-f or --force has no effect in interactive mode" << std::endl;
+        std::cerr << YELLOW << "[WARNING] " << RESET << "-f or --force has no effect in interactive mode" << std::endl;
         force = false;
     }
 
@@ -160,7 +160,7 @@ int main(int argc, char* argv[]) {
                 files.push_back(file);
             }
             else {
-                std::cout << YELLOW << "[Warning] " << RESET << "Ignoring file without valid date " << file.get_path().filename().string() << std::endl;
+                std::cerr << YELLOW << "[Warning] " << RESET << "Ignoring file without valid date " << file.get_path().filename().string() << std::endl;
             }
         }
     }
@@ -184,11 +184,11 @@ int main(int argc, char* argv[]) {
 
         // Only show clash error (or add newline) in interactive mode
         if (interactive) {
+            std::cout << std::endl;
             if (show_clash_error) {
-                std::cout << "\n" << RED << "[Error]: " << RESET << "Please resolve clashes before continuing" << std::endl;
+                std::cerr << RED << "[Error]: " << RESET << "Please resolve clashes before continuing" << std::endl;
                 show_clash_error = false;
             }
-            else std::cout << std::endl;
         }
 
         // Only ask to edit operations in interactive mode
@@ -213,7 +213,7 @@ int main(int argc, char* argv[]) {
                     return 0;
                 }
                 else {
-                    std::cout << YELLOW << "[WARNING] " << RESET << "At least once clashing file has been deleted" << std::endl;
+                    std::cerr << YELLOW << "[WARNING] " << RESET << "At least once clashing file has been deleted" << std::endl;
                 }
             }
 
