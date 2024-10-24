@@ -9,21 +9,23 @@
 #include "utility.h"
 
 ExifFile::ExifFile(fs::path path, std::shared_ptr<std::map<std::string, int>> proposed_name_counts_ptr) : path{path}, proposed_name_counts_ptr{proposed_name_counts_ptr} {
+    if (!proposed_name_counts_ptr) throw std::runtime_error("Invalid shared pointer passed to ExifFile.");
+
     std::string extension = this->path.extension();
-    std::string new_name = get_metadata_date(DEFAULT_EXIF_TAG);
+    std::string new_name = get_metadata_date(DEFAULT_DATE_TAG);
 
     // If no date could be set with default tag, try fallback tag
     if (new_name.empty()) {
-        new_name = get_metadata_date(FALLBACK_EXIF_TAG);
+        new_name = get_metadata_date(FALLBACK_DATE_TAG);
 
         // Give up after failing fallback (should never happen in theory)
         if (new_name.empty()) {
             this->add_proposed_name("");
             return;
         }
-        else current_exif_tag = FALLBACK_EXIF_TAG;
+        else this->current_date_tag = this->default_date_tag = FALLBACK_DATE_TAG;
     }
-    else current_exif_tag = DEFAULT_EXIF_TAG;
+    else this->current_date_tag = this->default_date_tag = DEFAULT_DATE_TAG;
 
     // Add extension and save proposed name
     new_name += extension;
@@ -46,15 +48,13 @@ void ExifFile::edit_proposed_name() {
 
     std::string extension = this->path.extension();
     std::vector<std::pair<std::string, std::string>> possible_names;
+
+    // Skip and Custom name options
     possible_names.push_back(std::make_pair("Skip", ""));
     possible_names.push_back(std::make_pair("Custom", ""));
-    for (const auto& tag : this->valid_exif_tags) {
-        std::string date = get_metadata_date(tag);
-        if (date.empty()) continue;
 
-        date += extension;
-        possible_names.push_back(std::make_pair(tag, date));
-    }
+    // Default tag option
+    possible_names.push_back(std::make_pair(this->default_date_tag, get_metadata_date(this->default_date_tag) + extension));
        
     for (size_t i = possible_names.size(); i > 0; --i) {
         std::cout << i << "\t" << possible_names[i-1].first;
@@ -62,7 +62,7 @@ void ExifFile::edit_proposed_name() {
             std::cout << ": " << possible_names[i-1].second;
         }
 
-        if (possible_names[i-1].first == this->current_exif_tag) std::cout << GREEN << " (selected)" << RESET << std::endl;
+        if (possible_names[i-1].first == this->current_date_tag) std::cout << GREEN << " (selected)" << RESET << std::endl;
         else std::cout << std::endl;
     }
 
@@ -91,7 +91,7 @@ void ExifFile::edit_proposed_name() {
         }
         
         const auto& selected = possible_names[selection - 1];
-        this->current_exif_tag = selected.first;
+        this->current_date_tag = selected.first;
 
         if (selected.first == "Custom") {
             std::cout << "Enter a custom name: ";
@@ -122,17 +122,6 @@ bool ExifFile::rename() {
 
     return true;
 }
-
-// to be displayed in reverse order
-const std::array<std::string, VALID_EXIF_TAG_COUNT> ExifFile::valid_exif_tags = {
-    EXIF_MEDIA_MODIFY_DATE,
-    EXIF_MEDIA_CREATE_DATE,
-    EXIF_FILE_MODIFY_DATE,
-    EXIF_FILE_ACCESS_DATE,
-    EXIF_MODIFY_DATE,
-    EXIF_CREATE_DATE,
-    EXIF_DATE_TIME_ORIGINAL
-};
 
 std::string ExifFile::get_exif_date(const Exiv2::Image::UniquePtr& media, const std::string& exif_tag) {
     try {

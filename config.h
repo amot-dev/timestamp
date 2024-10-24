@@ -3,8 +3,8 @@
 
 // Temporary config file
 
-#define DEFAULT_EXIF_TAG "Exif.Photo.DateTimeOriginal"
-#define FALLBACK_EXIF_TAG "Xmp.video.ModificationDate"
+#define DEFAULT_DATE_TAG "Exif.Photo.DateTimeOriginal" // For images
+#define FALLBACK_DATE_TAG "Xmp.video.ModificationDate" // For videos
 
 #define FINAL_DATE_FORMAT "{:%Y-%m-%d-%H%M-%S}"
 
