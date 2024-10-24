@@ -1,11 +1,11 @@
 #include "exif_file.h"
 
 #include <array>
-#include <format>
 #include <iostream>
 #include <regex>
 
 #include "color.h"
+#include "config.h"
 #include "utility.h"
 
 ExifFile::ExifFile(fs::path path, std::shared_ptr<std::map<std::string, int>> proposed_name_counts_ptr) : path{path}, proposed_name_counts_ptr{proposed_name_counts_ptr} {
@@ -142,11 +142,14 @@ std::string ExifFile::get_exif_date(const Exiv2::Image::UniquePtr& media, const 
             Exiv2::ExifKey dateTimeOriginalKey(exif_tag);
             Exiv2::ExifData::iterator exifEntry = exifData.findKey(dateTimeOriginalKey);
             if (exifEntry != exifData.end()) {
-                // TODO: Format time
-                std::cout << "Exif.Photo.DateTimeOriginal = " << exifEntry->value() << std::endl;
-                return "";
+                // Format time
+                auto time = exif_date_to_time_point(exifEntry->toString());
+                return time_point_to_formatted_string(time, FINAL_DATE_FORMAT);
             }
         }
+    }
+    catch(std::runtime_error& e) {
+        std::cout << RED << "[ERROR] " << RESET << e.what() << std::endl;
     }
     catch(...) {
         std::cout << RED << "[ERROR] " << RESET "Failed to read EXIF data from " << this->path.filename().string() << std::endl;
@@ -163,11 +166,8 @@ std::string ExifFile::get_xmp_date(const Exiv2::Image::UniquePtr& media, const s
             Exiv2::XmpData::iterator xmpEntry = xmpData.findKey(modificationDateKey);
             if (xmpEntry != xmpData.end()) {
                 // Format time
-                auto time = secondsSince1904ToTimePoint(xmpEntry->toInt64());
-                auto rounded_time = std::chrono::time_point_cast<std::chrono::seconds>(time);
-                auto formatted_time = std::format("{:%Y-%m-%d-%H%M-%S}", rounded_time);
-
-                return formatted_time;
+                auto time = xmp_epoch_to_time_point(xmpEntry->toInt64());
+                return time_point_to_formatted_string(time, FINAL_DATE_FORMAT);
             }
         }
     }

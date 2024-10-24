@@ -1,6 +1,6 @@
 # Variables
 CXX = g++
-CXXFLAGS = -std=c++20 -Wall -Wextra
+CXXFLAGS = -std=c++26 -Wall -Wextra
 LDFLAGS = -lexiv2
 SRC = timestamp.cpp exif_file.cpp
 OBJ = $(SRC:.cpp=.o)

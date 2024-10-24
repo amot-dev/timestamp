@@ -15,9 +15,6 @@
 #define EXIF_DATE_TIME_ORIGINAL "DateTimeOriginal"
 #define VALID_EXIF_TAG_COUNT 7
 
-#define DEFAULT_EXIF_TAG "Exif.Photo.DateTimeOriginal"
-#define FALLBACK_EXIF_TAG "Xmp.video.ModificationDate"
-
 namespace fs = std::filesystem;
 
 class ExifFile {
@@ -31,7 +28,6 @@ class ExifFile {
     std::string get_exif_date(const Exiv2::Image::UniquePtr& media, const std::string& exif_tag);
     std::string get_xmp_date(const Exiv2::Image::UniquePtr& media, const std::string& xmp_tag);
     std::string get_metadata_date(const std::string& tag);
-    std::vector<std::pair<std::string, std::string>> get_available_exif_tags();
     void add_proposed_name(const std::string& proposed_name);
     void remove_proposed_name();
     void set_proposed_name(const std::string& proposed_name);
