@@ -20,7 +20,15 @@ ExifFile::ExifFile(fs::path path,
 
     // Try to get exif date tag first
     std::string extension = this->path.extension();
-    std::string new_name = get_metadata_date(exif_date_tag, this->date_format);
+    std::string new_name;
+    try {
+        new_name = get_metadata_date(exif_date_tag, this->date_format);
+    }
+    catch(...) {
+        // No need to continue if attempting to read metadata once throws exception
+        std::cout << RED << "[ERROR] " << RESET "Failed to read metadata from " << this->path.filename().string() << std::endl;
+        return;
+    }
 
     // If no date could be set with exif tag, try xmp tag
     if (new_name.empty()) {
@@ -177,26 +185,21 @@ std::string ExifFile::get_xmp_date(const Exiv2::Image::UniquePtr& media, const s
 }
 
 std::string ExifFile::get_metadata_date(const std::string& tag, const std::string& date_format) {
-    try {
-        // Load the image or video file
-        Exiv2::Image::UniquePtr media = Exiv2::ImageFactory::open(this->path.string());
-        if (!media.get()) {
-            std::cout << RED << "[ERROR] " << RESET "Cannot open " << this->path.filename().string() << std::endl;
-            return "";
-        }
-
-        // Read the metadata from the file
-        media->readMetadata();
-
-        if (tag.starts_with("Exif.")) return get_exif_date(media, tag, date_format);
-        else if (tag.starts_with("Xmp.")) return get_xmp_date(media, tag, date_format);
-        else {
-            std::cout << RED << "[ERROR] " << RESET "Invalid tag: " << tag << std::endl;
-            return "";
-        }
+    // Load the image or video file
+    Exiv2::Image::UniquePtr media = Exiv2::ImageFactory::open(this->path.string());
+    if (!media.get()) {
+        std::cout << RED << "[ERROR] " << RESET "Cannot open " << this->path.filename().string() << std::endl;
+        return "";
     }
-    catch (...) {
-        std::cout << RED << "[ERROR] " << RESET "Failed to read from " << this->path.filename().string() << std::endl;
+
+    // Read the metadata from the file
+    media->readMetadata();
+
+    if (tag.starts_with("Exif.")) return get_exif_date(media, tag, date_format);
+    else if (tag.starts_with("Xmp.")) return get_xmp_date(media, tag, date_format);
+    else {
+        std::cout << RED << "[ERROR] " << RESET "Invalid tag: " << tag << std::endl;
+        return "";
     }
 
     return "";
