@@ -20,9 +20,12 @@ std::chrono::system_clock::time_point xmp_epoch_to_time_point(const long long xm
     return std::chrono::time_point<std::chrono::system_clock>(std::chrono::seconds(xmp_epoch - SECONDS_DIFFERENCE_1904_1970));
 }
 
-std::string time_point_to_formatted_string(const std::chrono::system_clock::time_point& time, const std::string& format) {
+std::string time_point_to_formatted_string(const std::chrono::system_clock::time_point& time, const std::string& date_format) {
+    // Change date format into proper format
+    std::string final_date_format = "{:" + date_format + "}";
+
     auto rounded_time = std::chrono::time_point_cast<std::chrono::seconds>(time);
-    return std::format(std::runtime_format(format), rounded_time);
+    return std::format(std::runtime_format(final_date_format), rounded_time);
 }
 
 #endif // UTILITY_H

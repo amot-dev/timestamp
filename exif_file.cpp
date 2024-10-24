@@ -5,27 +5,35 @@
 #include <regex>
 
 #include "color.h"
-#include "config.h"
 #include "utility.h"
 
-ExifFile::ExifFile(fs::path path, std::shared_ptr<std::map<std::string, int>> proposed_name_counts_ptr) : path{path}, proposed_name_counts_ptr{proposed_name_counts_ptr} {
+ExifFile::ExifFile(fs::path path,
+                   std::shared_ptr<std::map<std::string, int>> proposed_name_counts_ptr,
+                   const std::string& exif_date_tag,
+                   const std::string& xmp_date_tag,
+                   const std::string& date_format)
+    : path{path},
+      date_format{date_format},
+      proposed_name_counts_ptr{proposed_name_counts_ptr} {
+
     if (!proposed_name_counts_ptr) throw std::runtime_error("Invalid shared pointer passed to ExifFile.");
 
+    // Try to get exif date tag first
     std::string extension = this->path.extension();
-    std::string new_name = get_metadata_date(DEFAULT_DATE_TAG);
+    std::string new_name = get_metadata_date(exif_date_tag, this->date_format);
 
-    // If no date could be set with default tag, try fallback tag
+    // If no date could be set with exif tag, try xmp tag
     if (new_name.empty()) {
-        new_name = get_metadata_date(FALLBACK_DATE_TAG);
+        new_name = get_metadata_date(xmp_date_tag, this->date_format);
 
-        // Give up after failing fallback (should never happen in theory)
+        // Give up after failing xmp date tag (should never happen in theory)
         if (new_name.empty()) {
             this->add_proposed_name("");
             return;
         }
-        else this->current_date_tag = this->default_date_tag = FALLBACK_DATE_TAG;
+        else this->current_date_tag = this->default_date_tag = xmp_date_tag;
     }
-    else this->current_date_tag = this->default_date_tag = DEFAULT_DATE_TAG;
+    else this->current_date_tag = this->default_date_tag = exif_date_tag;
 
     // Add extension and save proposed name
     new_name += extension;
@@ -54,7 +62,8 @@ void ExifFile::edit_proposed_name() {
     possible_names.push_back(std::make_pair("Custom", ""));
 
     // Default tag option
-    possible_names.push_back(std::make_pair(this->default_date_tag, get_metadata_date(this->default_date_tag) + extension));
+    std::string date = get_metadata_date(this->default_date_tag, this->date_format) + extension;
+    possible_names.push_back(std::make_pair(this->default_date_tag, date));
        
     for (size_t i = possible_names.size(); i > 0; --i) {
         std::cout << i << "\t" << possible_names[i-1].first;
@@ -123,7 +132,7 @@ bool ExifFile::rename() {
     return true;
 }
 
-std::string ExifFile::get_exif_date(const Exiv2::Image::UniquePtr& media, const std::string& exif_tag) {
+std::string ExifFile::get_exif_date(const Exiv2::Image::UniquePtr& media, const std::string& exif_tag, const std::string& date_format) {
     try {
         // First try grab Exif.Photo.DateTimeOriginal if available
         Exiv2::ExifData &exifData = media->exifData();
@@ -133,7 +142,7 @@ std::string ExifFile::get_exif_date(const Exiv2::Image::UniquePtr& media, const 
             if (exifEntry != exifData.end()) {
                 // Format time
                 auto time = exif_date_to_time_point(exifEntry->toString());
-                return time_point_to_formatted_string(time, FINAL_DATE_FORMAT);
+                return time_point_to_formatted_string(time, date_format);
             }
         }
     }
@@ -147,7 +156,7 @@ std::string ExifFile::get_exif_date(const Exiv2::Image::UniquePtr& media, const 
     return "";
 }
 
-std::string ExifFile::get_xmp_date(const Exiv2::Image::UniquePtr& media, const std::string& xmp_tag) {
+std::string ExifFile::get_xmp_date(const Exiv2::Image::UniquePtr& media, const std::string& xmp_tag, const std::string& date_format) {
     try {
         Exiv2::XmpData &xmpData = media->xmpData();
         if (!xmpData.empty()) {
@@ -156,7 +165,7 @@ std::string ExifFile::get_xmp_date(const Exiv2::Image::UniquePtr& media, const s
             if (xmpEntry != xmpData.end()) {
                 // Format time
                 auto time = xmp_epoch_to_time_point(xmpEntry->toInt64());
-                return time_point_to_formatted_string(time, FINAL_DATE_FORMAT);
+                return time_point_to_formatted_string(time, date_format);
             }
         }
     }
@@ -167,7 +176,7 @@ std::string ExifFile::get_xmp_date(const Exiv2::Image::UniquePtr& media, const s
     return "";
 }
 
-std::string ExifFile::get_metadata_date(const std::string& tag) {
+std::string ExifFile::get_metadata_date(const std::string& tag, const std::string& date_format) {
     try {
         // Load the image or video file
         Exiv2::Image::UniquePtr media = Exiv2::ImageFactory::open(this->path.string());
@@ -179,8 +188,8 @@ std::string ExifFile::get_metadata_date(const std::string& tag) {
         // Read the metadata from the file
         media->readMetadata();
 
-        if (tag.starts_with("Exif.")) return get_exif_date(media, tag);
-        else if (tag.starts_with("Xmp.")) return get_xmp_date(media, tag);
+        if (tag.starts_with("Exif.")) return get_exif_date(media, tag, date_format);
+        else if (tag.starts_with("Xmp.")) return get_xmp_date(media, tag, date_format);
         else {
             std::cout << RED << "[ERROR] " << RESET "Invalid tag: " << tag << std::endl;
             return "";
