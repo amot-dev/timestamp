@@ -2,6 +2,13 @@
 A tool that modifies incoming image and video filenames into a standard time format.
 
 ## Installation
+### Arch Linux
+Available on the [AUR](https://aur.archlinux.org/packages/timestamp).
+
+### Debian/Ubuntu
+`.deb` file coming soon.
+
+### Other
 Ensure you have `exiv2` and `gcc` (version 14+) installed on your system.
 ```bash
 git clone https://github.com/amot-dev/timestamp.git
