@@ -1,5 +1,5 @@
 # timestamp
-A tool that modifies incoming image and video filenames into a standard time format.
+A tool that allows you to rename EXIF and XMP files to reflect date found in metadata. The specific tag used to extract data from the file can be changed, as can the final date format used in the file rename.
 
 ## Installation
 ### Arch Linux
@@ -41,5 +41,6 @@ Can be run either in the current directory as `timestamp` or in another director
 - Prevent files being named the same (resulting in a file deletion), unless called with `-f or --force`
 
 ## Images
-![image](https://github.com/user-attachments/assets/1b9de74c-f9ae-4d1b-995c-bc84a41640fd)
+![timestamp](https://github.com/user-attachments/assets/63100609-7886-449e-8205-3c17f18d2424)
+
 
