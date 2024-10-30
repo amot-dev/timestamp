@@ -6,7 +6,12 @@ A tool that allows you to rename EXIF and XMP files to reflect date found in met
 Available on the [AUR](https://aur.archlinux.org/packages/timestamp).
 
 ### Debian/Ubuntu
-`.deb` file coming soon.
+Download the deb file from the [latest release](https://github.com/amot-dev/timestamp/releases/latest/) and install it:
+```
+sudo apt install libexiv2-27
+dpkg -i timestamp_1.1.1-1_amd64.deb
+```
+Note that while this should work on all Debian-based systems, it was only tested on Debian itself (all dependencies exist in Ubuntu repositories).
 
 ### Other
 Ensure you have `exiv2` and `gcc` (version 14+) installed on your system.
