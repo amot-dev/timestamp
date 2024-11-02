@@ -271,6 +271,9 @@ int main(int argc, char* argv[]) {
         if (confirm == "y" || confirm == "Y") {
             rename_files(files);
         }
+        else {
+            std::cout << CYAN << "Operation aborted." << RESET << std::endl;
+        }
     }
 
     return 0;
