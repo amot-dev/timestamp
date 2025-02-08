@@ -3,45 +3,50 @@
 #include <array>
 #include <iostream>
 #include <regex>
+#include <sys/stat.h>
 
 #include "color.h"
 #include "utility.h"
 
-ExifFile::ExifFile(fs::path path,
-                   std::shared_ptr<std::map<std::string, int>> proposed_name_counts_ptr,
-                   const std::string& exif_date_tag,
-                   const std::string& xmp_date_tag,
-                   const std::string& date_format)
-    : path{path},
-      date_format{date_format},
-      proposed_name_counts_ptr{proposed_name_counts_ptr} {
+ExifFile::ExifFile(const Settings& settings,
+    fs::path path,
+    std::shared_ptr<std::map<std::string, int>> proposed_name_counts_ptr)
+    :   settings{settings},
+        path{path},
+        proposed_name_counts_ptr{proposed_name_counts_ptr} {
 
     if (!proposed_name_counts_ptr) throw std::runtime_error("Invalid shared pointer passed to ExifFile.");
 
-    // Try to get exif date tag first
+    // Get tags for extension
     std::string extension = this->path.extension();
-    std::string new_name;
-    try {
-        new_name = get_metadata_date(exif_date_tag, this->date_format);
-    }
-    catch(...) {
-        // No need to continue if attempting to read metadata once throws exception
-        std::cerr << RED << "[ERROR] " << RESET "Failed to read metadata from " << this->path.filename().string() << std::endl;
+    std::vector<std::string> tags = settings.get_tags(extension.substr(1)); // Remove dot when calling get_tags
+
+    // If tags are empty, return with blank name (skip)
+    if (tags.empty()) {
+        this->add_proposed_name("");
         return;
     }
 
-    // If no date could be set with exif tag, try xmp tag
-    if (new_name.empty()) {
-        new_name = get_metadata_date(xmp_date_tag, this->date_format);
-
-        // Give up after failing xmp date tag (should never happen in theory)
-        if (new_name.empty()) {
-            this->add_proposed_name("");
-            return;
+    // Try each tag in order of priority
+    std::string new_name;
+    for (const auto& tag : tags) {
+        try {
+            new_name = get_metadata_date(tag, this->settings.get_date_format());
+            if (!new_name.empty()) {
+                this->current_date_tag = this->default_date_tag = tag;
+                break;
+            }
         }
-        else this->current_date_tag = this->default_date_tag = xmp_date_tag;
+        catch (...) {
+            std::cerr << YELLOW << "[Warning] " << RESET << "Failed to read metadata from " << this->path.filename().string() << " using tag: " << tag << std::endl;
+        }
     }
-    else this->current_date_tag = this->default_date_tag = exif_date_tag;
+
+    // If no tags worked, return with blank name (skip)
+    if (new_name.empty()) {
+        this->add_proposed_name("");
+        return;
+    }
 
     // Add extension and save proposed name
     new_name += extension;
@@ -69,10 +74,16 @@ void ExifFile::edit_proposed_name() {
     possible_names.push_back(std::make_pair("Skip", ""));
     possible_names.push_back(std::make_pair("Custom", ""));
 
-    // Default tag option
-    std::string date = get_metadata_date(this->default_date_tag, this->date_format) + extension;
-    possible_names.push_back(std::make_pair(this->default_date_tag, date));
-       
+    // Build list of possible names using all tags for the extension (in reverse order)
+    std::vector<std::pair<std::string, std::string>> temp_names;
+    for (const auto& tag : this->settings.get_tags(extension.substr(1))) {
+        std::string date = get_metadata_date(tag, this->settings.get_date_format());
+        if (!date.empty()) temp_names.emplace_back(tag, date + extension);
+    }
+
+    // Insert in reverse order
+    possible_names.insert(possible_names.end(), temp_names.rbegin(), temp_names.rend());
+
     for (size_t i = possible_names.size(); i > 0; --i) {
         std::cout << i << "\t" << possible_names[i-1].first;
         if (possible_names[i-1].first != "Custom" && possible_names[i-1].first != "Skip") {
@@ -80,6 +91,7 @@ void ExifFile::edit_proposed_name() {
         }
 
         if (possible_names[i-1].first == this->current_date_tag) std::cout << GREEN << " (selected)" << RESET << std::endl;
+        else if (possible_names[i-1].first == this->default_date_tag) std::cout << YELLOW << " (default)" << RESET << std::endl;
         else std::cout << std::endl;
     }
 
@@ -184,6 +196,31 @@ std::string ExifFile::get_xmp_date(const Exiv2::Image::UniquePtr& media, const s
     return "";
 }
 
+std::string ExifFile::get_inode_date(const std::string& inode_tag, const std::string& date_format) {
+    struct stat file_stat;
+
+    // Attempt to get file stat
+    if (stat(this->path.c_str(), &file_stat) != 0) {
+        std::cerr << RED << "[ERROR] " << RESET "Failed to stat file " << this->path.filename().string() << std::endl;
+        return "";
+    }
+
+    time_t inode_time = 0;
+
+    if (inode_tag == "inode.mtime") inode_time = file_stat.st_mtime;
+    else if (inode_tag == "inode.atime") inode_time = file_stat.st_atime;
+    else if (inode_tag == "inode.ctime") inode_time = file_stat.st_ctime;
+    else {
+        std::cerr << RED << "[ERROR] " << RESET "Invalid inode tag: " << inode_tag << std::endl;
+        return "";
+    }
+
+    // Format time
+    // TODO: Deal with timezone shenanigans
+    auto time = epoch_to_time_point(inode_time);
+    return time_point_to_formatted_string(time, date_format);
+}
+
 std::string ExifFile::get_metadata_date(const std::string& tag, const std::string& date_format) {
     // Load the image or video file
     Exiv2::Image::UniquePtr media = Exiv2::ImageFactory::open(this->path.string());
@@ -197,6 +234,7 @@ std::string ExifFile::get_metadata_date(const std::string& tag, const std::strin
 
     if (tag.starts_with("Exif.")) return get_exif_date(media, tag, date_format);
     else if (tag.starts_with("Xmp.")) return get_xmp_date(media, tag, date_format);
+    else if (tag.starts_with("inode.")) return get_inode_date(tag, date_format);
     else {
         std::cerr << RED << "[ERROR] " << RESET "Invalid tag: " << tag << std::endl;
         return "";

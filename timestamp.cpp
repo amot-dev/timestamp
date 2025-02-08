@@ -10,6 +10,7 @@
 
 #include "color.h"
 #include "exif_file.h"
+#include "settings.h"
 
 namespace fs = std::filesystem;
 
@@ -67,12 +68,10 @@ void rename_files(std::vector<ExifFile>& files) {
 
 // Print help menu
 void print_help() {
-    std::cout << "Usage: timestamp [directory] [-f|--force] [-e|--exif <tag>] [-x|--xmp <tag>] [-d|--date-format <format>] [-i|--interactive] [-h|--help]" << std::endl;
+    std::cout << "Usage: timestamp [directory] [--config-file <path>] [-f|--force] [-i|--interactive] [-h|--help]" << std::endl;
     std::cout << "Options:" << std::endl;
+    std::cout << "  -c, --config-file <path>        Specify YAML configuration file" << std::endl;
     std::cout << "  -f, --force                     Force execution (will delete clashing files, not recommended)" << std::endl;
-    std::cout << "  -e, --exif <tag>                Specify EXIF metadata date tag" << std::endl;
-    std::cout << "  -x, --xmp <tag>                 Specify XMP metadata date tag" << std::endl;
-    std::cout << "  -d, --date-format <format>      Specify date format for renamed files" << std::endl;
     std::cout << "  -i, --interactive               Enable interactive mode" << std::endl;
     std::cout << "  -h, --help                      Show this help message" << std::endl;
 }
@@ -80,18 +79,14 @@ void print_help() {
 int main(int argc, char* argv[]) {
     // Variables to hold the argument values
     std::string directory = ".";
-    std::string exif_date_tag = "Exif.Photo.DateTimeOriginal"; // Default value
-    std::string xmp_date_tag = "Xmp.video.ModificationDate"; // Default value
-    std::string date_format = "%Y-%m-%d-%H%M-%S"; // Default value
+    std::string config_file;
     bool force = false;
     bool interactive = false;
 
     // Option structure for getopt_long
     static struct option long_options[] = {
+        {"config-file", required_argument, 0,  'c' },
         {"force",       no_argument,       0,  'f' },
-        {"exif",        required_argument, 0,  'e' },
-        {"xmp",         required_argument, 0,  'x' },
-        {"date-format", required_argument, 0,  'd' },
         {"interactive", no_argument,       0,  'i' },
         {"help",        no_argument,       0,  'h' },
         {0,             0,                 0,   0  }
@@ -102,22 +97,13 @@ int main(int argc, char* argv[]) {
     opterr = 0;
 
     // Loop to parse command-line arguments
-    while ((opt = getopt_long(argc, argv, "fe:x:d:ih", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "c:fih", long_options, &option_index)) != -1) {
         switch (opt) {
             case 'f':
                 force = true;
                 break;
-            case 'e':
-                exif_date_tag = optarg;
-                // TODO: validate
-                break;
-            case 'x':
-                xmp_date_tag = optarg;
-                // TODO: validate
-                break;
-            case 'd':
-                date_format = optarg;
-                // TODO: validate
+            case 'c':
+                config_file = optarg;
                 break;
             case 'i':
                 interactive = true;
@@ -142,10 +128,14 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // Warn about force and interactive
     if (force && interactive) {
         std::cerr << YELLOW << "[WARNING] " << RESET << "-f or --force has no effect in interactive mode" << std::endl;
         force = false;
     }
+
+    // Load configuration
+    Settings settings(config_file);
 
     std::vector<ExifFile> files;
     auto proposed_name_counts_ptr = std::make_shared<std::map<std::string, int>>();
@@ -153,14 +143,14 @@ int main(int argc, char* argv[]) {
     // Collect files from the specified directory
     for (const auto& entry : fs::directory_iterator(directory)) {
         if (fs::is_regular_file(entry)) {
-            ExifFile file = ExifFile(entry.path(), proposed_name_counts_ptr, exif_date_tag, xmp_date_tag, date_format);
+            ExifFile file = ExifFile(settings, entry.path(), proposed_name_counts_ptr);
             
             // Ignore files without valid EXIF dates
             if (!file.is_skipped()) {
                 files.push_back(file);
             }
             else {
-                std::cerr << YELLOW << "[Warning] " << RESET << "Ignoring file without valid date " << file.get_path().filename().string() << std::endl;
+                std::cerr << YELLOW << "[Warning] " << RESET << "Ignoring file without valid date: " << file.get_path().filename().string() << std::endl;
             }
         }
     }
