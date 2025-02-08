@@ -24,11 +24,18 @@ std::chrono::system_clock::time_point epoch_to_time_point(time_t epoch) {
     return std::chrono::system_clock::from_time_t(epoch);
 }
 
-std::string time_point_to_formatted_string(const std::chrono::system_clock::time_point& time, const std::string& date_format) {
+std::string time_point_to_formatted_string(const std::chrono::system_clock::time_point& time, const std::string& date_format, bool localtime = false) {
     // Change date format into proper format
     std::string final_date_format = "{:" + date_format + "}";
 
+    // Round time to seconds only
     auto rounded_time = std::chrono::time_point_cast<std::chrono::seconds>(time);
+
+    // Format time
+    if (localtime) {
+        std::chrono::zoned_time zoned_time{std::chrono::current_zone(), rounded_time};
+        return std::format(std::runtime_format(final_date_format), zoned_time);
+    }
     return std::format(std::runtime_format(final_date_format), rounded_time);
 }
 

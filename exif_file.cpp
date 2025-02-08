@@ -1,8 +1,6 @@
 #include "exif_file.h"
 
-#include <array>
 #include <iostream>
-#include <regex>
 #include <sys/stat.h>
 
 #include "color.h"
@@ -216,12 +214,14 @@ std::string ExifFile::get_inode_date(const std::string& inode_tag, const std::st
     }
 
     // Format time
-    // TODO: Deal with timezone shenanigans
     auto time = epoch_to_time_point(inode_time);
-    return time_point_to_formatted_string(time, date_format);
+    return time_point_to_formatted_string(time, date_format, true);
 }
 
 std::string ExifFile::get_metadata_date(const std::string& tag, const std::string& date_format) {
+    // Handle potential inode tag first
+    if (tag.starts_with("inode.")) return get_inode_date(tag, date_format);
+
     // Load the image or video file
     Exiv2::Image::UniquePtr media = Exiv2::ImageFactory::open(this->path.string());
     if (!media.get()) {
@@ -232,14 +232,16 @@ std::string ExifFile::get_metadata_date(const std::string& tag, const std::strin
     // Read the metadata from the file
     media->readMetadata();
 
+    // Test whether this is Exif or Xmp
     if (tag.starts_with("Exif.")) return get_exif_date(media, tag, date_format);
     else if (tag.starts_with("Xmp.")) return get_xmp_date(media, tag, date_format);
-    else if (tag.starts_with("inode.")) return get_inode_date(tag, date_format);
     else {
         std::cerr << RED << "[ERROR] " << RESET "Invalid tag: " << tag << std::endl;
+        Exiv2::XmpParser::terminate();
         return "";
     }
 
+    Exiv2::XmpParser::terminate();
     return "";
 }
 
