@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <getopt.h>
 #include <iostream>
 #include <map>
@@ -66,6 +67,17 @@ void rename_files(std::vector<ExifFile>& files) {
               << std::endl;
 }
 
+std::string get_default_config_path() {
+    // Get user's home directory
+    const char* home = getenv("HOME");
+    if (home) {
+        return std::string(home) + "/.config/timestamp.yaml";
+    }
+
+    // Fallback if $HOME is not set
+    return "/etc/timestamp.yaml";
+}
+
 // Print help menu
 void print_help() {
     std::cout << "Usage: timestamp [directory] [--config-file <path>] [-f|--force] [-i|--interactive] [-h|--help]" << std::endl;
@@ -79,7 +91,8 @@ void print_help() {
 int main(int argc, char* argv[]) {
     // Variables to hold the argument values
     std::string directory = ".";
-    std::string config_file;
+    std::string config_file = get_default_config_path();
+    bool using_default_config = true;
     bool force = false;
     bool interactive = false;
 
@@ -104,6 +117,7 @@ int main(int argc, char* argv[]) {
                 break;
             case 'c':
                 config_file = optarg;
+                using_default_config = false;
                 break;
             case 'i':
                 interactive = true;
@@ -128,14 +142,27 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // Ensure config file is good
+    if (!std::ifstream(config_file)) {
+        if (using_default_config) {
+            std::cerr << YELLOW << "[WARNING] " << RESET << "Default config file not found. Creating " << config_file << std::endl;
+            if (!Settings::generate_default_config(config_file)) {
+                return 1;
+            }
+        }
+        else {
+            std::cerr << RED << "[ERROR] " << RESET << "Specified config file does not exist: " << config_file << std::endl;
+            return 1;
+        }
+    }
+    // Load configuration
+    Settings settings(config_file);
+
     // Warn about force and interactive
     if (force && interactive) {
         std::cerr << YELLOW << "[WARNING] " << RESET << "-f or --force has no effect in interactive mode" << std::endl;
         force = false;
     }
-
-    // Load configuration
-    Settings settings(config_file);
 
     std::vector<ExifFile> files;
     auto proposed_name_counts_ptr = std::make_shared<std::map<std::string, int>>();
@@ -150,7 +177,7 @@ int main(int argc, char* argv[]) {
                 files.push_back(file);
             }
             else {
-                std::cerr << YELLOW << "[Warning] " << RESET << "Ignoring file without valid date: " << file.get_path().filename().string() << std::endl;
+                std::cerr << YELLOW << "[WARNING] " << RESET << "Ignoring file without valid date: " << file.get_path().filename().string() << std::endl;
             }
         }
     }
@@ -176,7 +203,7 @@ int main(int argc, char* argv[]) {
         if (interactive) {
             std::cout << std::endl;
             if (show_clash_error) {
-                std::cerr << RED << "[Error]: " << RESET << "Please resolve clashes before continuing" << std::endl;
+                std::cerr << RED << "[ERROR]: " << RESET << "Please resolve clashes before continuing" << std::endl;
                 show_clash_error = false;
             }
         }

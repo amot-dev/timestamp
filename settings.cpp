@@ -2,7 +2,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <yaml-cpp/yaml.h>
 
 #include "color.h"
 
@@ -40,7 +39,61 @@ Settings::Settings(const std::string& filepath) {
         }
     }
     catch (const std::exception& e) {
-        std::cerr << RED << "[ERROR] " << RESET << "Failed to parse YAML file: " << e.what() << std::endl;
+        std::cerr << RED << "[ERROR] " << RESET << "Failed to parse config file: " << e.what() << std::endl;
+    }
+}
+
+const YAML::Node Settings::DEFAULT_CONFIG = [] {
+    YAML::Node node;
+
+    // Date format
+    node["date_format"] = "%Y-%m-%d-%H%M-%S";
+
+    // Extension groups
+    node["extension_groups"]["image"] = YAML::Node(YAML::NodeType::Sequence);
+    node["extension_groups"]["image"].push_back("avif");
+    node["extension_groups"]["image"].push_back("gif");
+    node["extension_groups"]["image"].push_back("jpg");
+    node["extension_groups"]["image"].push_back("jpeg");
+    node["extension_groups"]["image"].push_back("png");
+    node["extension_groups"]["image"].push_back("svg");
+    node["extension_groups"]["image"].push_back("webp");
+
+    node["extension_groups"]["video"] = YAML::Node(YAML::NodeType::Sequence);
+    node["extension_groups"]["video"].push_back("avi");
+    node["extension_groups"]["video"].push_back("mkv");
+    node["extension_groups"]["video"].push_back("mov");
+    node["extension_groups"]["video"].push_back("mp4");
+    node["extension_groups"]["video"].push_back("mpeg");
+    node["extension_groups"]["video"].push_back("webm");
+
+    // Tags for extension groups
+    node["tags_for"]["image"] = YAML::Node(YAML::NodeType::Sequence);
+    node["tags_for"]["image"].push_back("Exif.Photo.DateTimeOriginal");
+    node["tags_for"]["image"].push_back("inode.mtime");
+
+    node["tags_for"]["video"] = YAML::Node(YAML::NodeType::Sequence);
+    node["tags_for"]["video"].push_back("Xmp.video.ModifyDate");
+    node["tags_for"]["video"].push_back("inode.mtime");
+
+    return node;
+}();
+
+bool Settings::generate_default_config(const std::string& filepath) {
+    try {
+        std::ofstream file(filepath);
+        if (!file) {
+            std::cerr << RED << "[ERROR] " << RESET << "Failed to create config file: " << filepath << std::endl;
+            return false;
+        }
+
+        file << DEFAULT_CONFIG;  // Dump YAML to file
+        file.close();
+        return true;
+    }
+    catch (const std::exception& e) {
+        std::cerr << RED << "[ERROR] " << RESET << "Failed to write config file: " << e.what() << std::endl;
+        return false;
     }
 }
 

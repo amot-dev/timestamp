@@ -17,6 +17,11 @@ ExifFile::ExifFile(const Settings& settings,
 
     // Get tags for extension
     std::string extension = this->path.extension();
+    if (extension.empty()) {
+        this->add_proposed_name("");
+        return;
+    }
+
     std::vector<std::string> tags = settings.get_tags(extension.substr(1)); // Remove dot when calling get_tags
 
     // If tags are empty, return with blank name (skip)
@@ -36,7 +41,7 @@ ExifFile::ExifFile(const Settings& settings,
             }
         }
         catch (...) {
-            std::cerr << YELLOW << "[Warning] " << RESET << "Failed to read metadata from " << this->path.filename().string() << " using tag: " << tag << std::endl;
+            std::cerr << YELLOW << "[WARNING] " << RESET << "Failed to read metadata from " << this->path.filename().string() << " using tag: " << tag << std::endl;
         }
     }
 
@@ -143,7 +148,7 @@ bool ExifFile::rename() {
         fs::rename(this->path, new_path);
     }
     catch (const fs::filesystem_error& e) {
-        std::cerr << RED << "[Error] " << RESET << e.what() << std::endl;
+        std::cerr << RED << "[ERROR] " << RESET << e.what() << std::endl;
         return false;
     }
 
