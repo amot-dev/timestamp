@@ -1,0 +1,29 @@
+# Date format for displaying dates
+date_format: "%Y-%m-%d-%H%M-%S"
+
+# Define groups of file extensions
+extension_groups:
+  image:
+    - "avif"
+    - "gif"
+    - "jpg"
+    - "jpeg"
+    - "png"
+    - "svg"
+    - "webp"
+  video:
+    - "avi"
+    - "mkv"
+    - "mov"
+    - "mp4"
+    - "mpeg"
+    - "webm"
+
+# Define tag mappings for extension groups
+tags_for:
+  image:
+    - "Exif.Photo.DateTimeOriginal"
+    - "inode.mtime"
+  video:
+    - "Xmp.video.ModifyDate"
+    - "inode.mtime"

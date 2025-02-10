@@ -52,41 +52,37 @@ Settings::Settings(const std::string& filepath) {
     }
 }
 
-const YAML::Node Settings::DEFAULT_CONFIG = [] {
-    YAML::Node node;
+const std::string Settings::DEFAULT_CONFIG_TEXT =
+R"(# Date format for displaying dates
+date_format: "%Y-%m-%d-%H%M-%S"
 
-    // Date format
-    node["date_format"] = "%Y-%m-%d-%H%M-%S";
+# Define groups of file extensions
+extension_groups:
+  image:
+    - "avif"
+    - "gif"
+    - "jpg"
+    - "jpeg"
+    - "png"
+    - "svg"
+    - "webp"
+  video:
+    - "avi"
+    - "mkv"
+    - "mov"
+    - "mp4"
+    - "mpeg"
+    - "webm"
 
-    // Extension groups
-    node["extension_groups"]["image"] = YAML::Node(YAML::NodeType::Sequence);
-    node["extension_groups"]["image"].push_back("avif");
-    node["extension_groups"]["image"].push_back("gif");
-    node["extension_groups"]["image"].push_back("jpg");
-    node["extension_groups"]["image"].push_back("jpeg");
-    node["extension_groups"]["image"].push_back("png");
-    node["extension_groups"]["image"].push_back("svg");
-    node["extension_groups"]["image"].push_back("webp");
-
-    node["extension_groups"]["video"] = YAML::Node(YAML::NodeType::Sequence);
-    node["extension_groups"]["video"].push_back("avi");
-    node["extension_groups"]["video"].push_back("mkv");
-    node["extension_groups"]["video"].push_back("mov");
-    node["extension_groups"]["video"].push_back("mp4");
-    node["extension_groups"]["video"].push_back("mpeg");
-    node["extension_groups"]["video"].push_back("webm");
-
-    // Tags for extension groups
-    node["tags_for"]["image"] = YAML::Node(YAML::NodeType::Sequence);
-    node["tags_for"]["image"].push_back("Exif.Photo.DateTimeOriginal");
-    node["tags_for"]["image"].push_back("inode.mtime");
-
-    node["tags_for"]["video"] = YAML::Node(YAML::NodeType::Sequence);
-    node["tags_for"]["video"].push_back("Xmp.video.ModifyDate");
-    node["tags_for"]["video"].push_back("inode.mtime");
-
-    return node;
-}();
+# Define tag mappings for extension groups
+tags_for:
+  image:
+    - "Exif.Photo.DateTimeOriginal"
+    - "inode.mtime"
+  video:
+    - "Xmp.video.ModifyDate"
+    - "inode.mtime"
+)";
 
 bool Settings::generate_default_config(const std::string& filepath) {
     try {
@@ -96,7 +92,7 @@ bool Settings::generate_default_config(const std::string& filepath) {
             return false;
         }
 
-        file << DEFAULT_CONFIG;  // Dump YAML to file
+        file << DEFAULT_CONFIG_TEXT;  // Dump YAML to file
         file.close();
         return true;
     }

@@ -8,7 +8,7 @@
 
 class Settings {
 private:
-    static const YAML::Node DEFAULT_CONFIG;
+    static const std::string DEFAULT_CONFIG_TEXT;
     std::string date_format;
     std::unordered_map<std::string, std::vector<std::string>> extension_to_tags;
 
