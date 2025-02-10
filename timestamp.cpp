@@ -10,13 +10,13 @@
 #include <vector>
 
 #include "color.h"
-#include "exif_file.h"
+#include "dated_file.h"
 #include "settings.h"
 
 namespace fs = std::filesystem;
 
 // Display proposed file name changes
-void display_proposed_changes(const std::vector<ExifFile>& files, bool first_display) {
+void display_proposed_changes(const std::vector<DatedFile>& files, bool first_display) {
     if (!first_display) std::cout << std::endl;
 
     std::cout << CYAN << "Files to rename:" << RESET << std::endl;
@@ -52,7 +52,7 @@ bool has_clashes(const std::shared_ptr<std::map<std::string, int>>& name_count) 
 }
 
 // Rename files
-void rename_files(std::vector<ExifFile>& files) {
+void rename_files(std::vector<DatedFile>& files) {
     int skip_count = 0;
     for (auto file : files) {
         if (!file.rename()) skip_count++;
@@ -171,13 +171,13 @@ int main(int argc, char* argv[]) {
         force = false;
     }
 
-    std::vector<ExifFile> files;
+    std::vector<DatedFile> files;
     auto proposed_name_counts_ptr = std::make_shared<std::map<std::string, int>>();
 
     // Collect files from the specified directory
     for (const auto& entry : fs::directory_iterator(directory)) {
         if (fs::is_regular_file(entry)) {
-            ExifFile file = ExifFile(settings.value(), entry.path(), proposed_name_counts_ptr);
+            DatedFile file = DatedFile(settings.value(), entry.path(), proposed_name_counts_ptr);
             
             // Ignore files without valid EXIF dates
             if (!file.is_skipped()) {
@@ -196,7 +196,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Sort by filename in reverse alphabetical order (will be shown in alphabetical order)
-    std::sort(files.begin(), files.end(), [](const ExifFile& a, const ExifFile& b) {
+    std::sort(files.begin(), files.end(), [](const DatedFile& a, const DatedFile& b) {
         return a.get_path() > b.get_path(); // Reverse order based on paths
     });
 
@@ -272,7 +272,7 @@ int main(int argc, char* argv[]) {
         }
 
         // Apply the edits for selected files
-        std::vector<ExifFile> files_to_edit;
+        std::vector<DatedFile> files_to_edit;
         for (const auto& index : selected_files) {
             if (index > 0 && index <= files.size()) {
                 files[index - 1].edit_proposed_name();

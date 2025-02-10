@@ -1,4 +1,4 @@
-#include "exif_file.h"
+#include "dated_file.h"
 
 #include <iostream>
 #include <sys/stat.h>
@@ -6,7 +6,7 @@
 #include "color.h"
 #include "utility.h"
 
-ExifFile::ExifFile(const Settings& settings,
+DatedFile::DatedFile(const Settings& settings,
     fs::path path,
     std::shared_ptr<std::map<std::string, int>> proposed_name_counts_ptr)
     :   settings{settings},
@@ -56,18 +56,18 @@ ExifFile::ExifFile(const Settings& settings,
     this->add_proposed_name(new_name);
 }
 
-fs::path ExifFile::get_path() const { return this->path; }
+fs::path DatedFile::get_path() const { return this->path; }
 
-std::string ExifFile::get_proposed_name() const { return this->proposed_name; }
+std::string DatedFile::get_proposed_name() const { return this->proposed_name; }
 
-bool ExifFile::is_skipped() const { return this->proposed_name.empty(); }
+bool DatedFile::is_skipped() const { return this->proposed_name.empty(); }
 
-bool ExifFile::is_clashing() const {
+bool DatedFile::is_clashing() const {
     if (this->is_skipped()) return (*this->proposed_name_counts_ptr)[this->path.filename().string()] > 1;
     else return (*this->proposed_name_counts_ptr)[this->proposed_name] > 1;
 }
 
-void ExifFile::edit_proposed_name() {
+void DatedFile::edit_proposed_name() {
     std::cout << CYAN << "\n\nPossible names for " << this->path.filename().string() << RESET << std::endl;
 
     std::string extension = this->path.extension();
@@ -138,7 +138,7 @@ void ExifFile::edit_proposed_name() {
     }
 }
 
-bool ExifFile::rename() {
+bool DatedFile::rename() {
     if (this->is_skipped()) return false;
     if (this->proposed_name == this->path.filename().string()) return false;
 
@@ -155,7 +155,7 @@ bool ExifFile::rename() {
     return true;
 }
 
-std::string ExifFile::get_exif_date(const Exiv2::Image::UniquePtr& media, const std::string& exif_tag, const std::string& date_format) {
+std::string DatedFile::get_exif_date(const Exiv2::Image::UniquePtr& media, const std::string& exif_tag, const std::string& date_format) {
     try {
         // First try grab Exif.Photo.DateTimeOriginal if available
         Exiv2::ExifData &exifData = media->exifData();
@@ -179,7 +179,7 @@ std::string ExifFile::get_exif_date(const Exiv2::Image::UniquePtr& media, const 
     return "";
 }
 
-std::string ExifFile::get_xmp_date(const Exiv2::Image::UniquePtr& media, const std::string& xmp_tag, const std::string& date_format) {
+std::string DatedFile::get_xmp_date(const Exiv2::Image::UniquePtr& media, const std::string& xmp_tag, const std::string& date_format) {
     try {
         Exiv2::XmpData &xmpData = media->xmpData();
         if (!xmpData.empty()) {
@@ -199,7 +199,7 @@ std::string ExifFile::get_xmp_date(const Exiv2::Image::UniquePtr& media, const s
     return "";
 }
 
-std::string ExifFile::get_inode_date(const std::string& inode_tag, const std::string& date_format) {
+std::string DatedFile::get_inode_date(const std::string& inode_tag, const std::string& date_format) {
     struct stat file_stat;
 
     // Attempt to get file stat
@@ -223,7 +223,7 @@ std::string ExifFile::get_inode_date(const std::string& inode_tag, const std::st
     return time_point_to_formatted_string(time, date_format, true);
 }
 
-std::string ExifFile::get_metadata_date(const std::string& tag, const std::string& date_format) {
+std::string DatedFile::get_metadata_date(const std::string& tag, const std::string& date_format) {
     // Handle potential inode tag first
     if (tag.starts_with("inode.")) return get_inode_date(tag, date_format);
 
@@ -250,7 +250,7 @@ std::string ExifFile::get_metadata_date(const std::string& tag, const std::strin
     return "";
 }
 
-void ExifFile::add_proposed_name(const std::string& proposed_name) {
+void DatedFile::add_proposed_name(const std::string& proposed_name) {
     // Change name
     this->proposed_name = proposed_name;
 
@@ -259,7 +259,7 @@ void ExifFile::add_proposed_name(const std::string& proposed_name) {
     if (!proposed_name.empty()) (*this->proposed_name_counts_ptr)[proposed_name]++;
 }
 
-void ExifFile::remove_proposed_name() {
+void DatedFile::remove_proposed_name() {
     // Set old name based on skipped or not
     std::string old_name;
     if (this->is_skipped()) old_name = path.filename().string();
@@ -274,7 +274,7 @@ void ExifFile::remove_proposed_name() {
     }
 }
 
-void ExifFile::set_proposed_name(const std::string& proposed_name) {
+void DatedFile::set_proposed_name(const std::string& proposed_name) {
     this->remove_proposed_name();
     this->add_proposed_name(proposed_name);
 }

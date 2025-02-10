@@ -2,7 +2,7 @@
 CXX = g++
 CXXFLAGS = -std=c++26 -Wall -Wextra -fstack-protector-strong
 LDFLAGS = -lexiv2 -lyaml-cpp -Wl,-z,relro -Wl,-z,now
-SRC = timestamp.cpp exif_file.cpp settings.cpp utility.cpp
+SRC = timestamp.cpp dated_file.cpp settings.cpp utility.cpp
 OBJ = $(SRC:.cpp=.o)
 TARGET = timestamp
 

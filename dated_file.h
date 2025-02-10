@@ -1,5 +1,5 @@
-#ifndef EXIF_FILE_H
-#define EXIF_FILE_H
+#ifndef DATED_FILE_H
+#define DATED_FILE_H
 
 #include <exiv2/exiv2.hpp>
 #include <filesystem>
@@ -10,7 +10,7 @@
 
 namespace fs = std::filesystem;
 
-class ExifFile {
+class DatedFile {
     Settings settings;
     fs::path path;
     std::string proposed_name;
@@ -27,7 +27,7 @@ class ExifFile {
     void set_proposed_name(const std::string& proposed_name);
 
 public:
-    ExifFile(
+    DatedFile(
         const Settings& settings,
         fs::path path,
         std::shared_ptr<std::map<std::string, int>> proposed_name_counts_ptr
@@ -40,4 +40,4 @@ public:
     bool rename();
 };
 
-#endif //EXIF_FILE_H
+#endif // DATED_FILE_H
