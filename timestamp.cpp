@@ -156,7 +156,14 @@ int main(int argc, char* argv[]) {
         }
     }
     // Load configuration
-    Settings settings(config_file);
+    std::optional<Settings> settings;
+    try {
+        settings.emplace(config_file);
+    }
+    catch (const std::exception& e) {
+        // Message for any exception already printed by Settings constructor
+        return 1;
+    }
 
     // Warn about force and interactive
     if (force && interactive) {
@@ -170,7 +177,7 @@ int main(int argc, char* argv[]) {
     // Collect files from the specified directory
     for (const auto& entry : fs::directory_iterator(directory)) {
         if (fs::is_regular_file(entry)) {
-            ExifFile file = ExifFile(settings, entry.path(), proposed_name_counts_ptr);
+            ExifFile file = ExifFile(settings.value(), entry.path(), proposed_name_counts_ptr);
             
             // Ignore files without valid EXIF dates
             if (!file.is_skipped()) {

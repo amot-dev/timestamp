@@ -4,15 +4,23 @@
 #include <iostream>
 
 #include "color.h"
+#include "utility.h"
 
 Settings::Settings(const std::string& filepath) {
     try {
         YAML::Node config = YAML::LoadFile(filepath);
 
         // Load date format
-        // TODO: verify this date format
-        if (config["date_format"]) date_format = config["date_format"].as<std::string>();
-        else date_format = "%Y-%m-%d-%H%M-%S";  // Default format
+        if (config["date_format"]) {
+            date_format = config["date_format"].as<std::string>();
+
+            // Attempt to use given date format (will throw exception if invalid format)
+            time_point_to_formatted_string(std::chrono::system_clock::now(), date_format);
+        }
+        else {
+            date_format = "%Y-%m-%d-%H%M-%S";  // Default format
+            std::cerr << YELLOW << "[WARNING] " << RESET << "Config contains no date format. Using default of " << date_format << std::endl;
+        }
 
         // Load tags_for section
         if (config["tags_for"]) {
@@ -40,6 +48,7 @@ Settings::Settings(const std::string& filepath) {
     }
     catch (const std::exception& e) {
         std::cerr << RED << "[ERROR] " << RESET << "Failed to parse config file: " << e.what() << std::endl;
+        throw std::runtime_error("Failed to parse config file");
     }
 }
 

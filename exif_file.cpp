@@ -13,7 +13,7 @@ ExifFile::ExifFile(const Settings& settings,
         path{path},
         proposed_name_counts_ptr{proposed_name_counts_ptr} {
 
-    if (!proposed_name_counts_ptr) throw std::runtime_error("Invalid shared pointer passed to ExifFile.");
+    if (!proposed_name_counts_ptr) throw std::runtime_error("Invalid shared pointer passed to ExifFile");
 
     // Get tags for extension
     std::string extension = this->path.extension();
