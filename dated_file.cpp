@@ -80,7 +80,16 @@ void DatedFile::edit_proposed_name() {
     // Build list of possible names using all tags for the extension (in reverse order)
     std::vector<std::pair<std::string, std::string>> temp_names;
     for (const auto& tag : this->settings.get_tags(extension.substr(1))) {
-        std::string date = get_metadata_date(tag, this->settings.get_date_format());
+        std::string date;
+        try {
+            date = get_metadata_date(tag, this->settings.get_date_format());
+        }
+        catch(Exiv2::Error const&) {
+            // Silently ignore any metadata errors
+            // The user is warned about any of these during initial file load
+            continue;
+        }
+
         if (!date.empty()) temp_names.emplace_back(tag, date + extension);
     }
 
