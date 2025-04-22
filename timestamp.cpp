@@ -244,7 +244,8 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        std::set<size_t> selected_files; // Use a set to store unique selections
+        // Use a set to store unique selections
+        std::set<size_t> selected_files;
         std::istringstream stream(input);
         std::string token;
 
@@ -271,13 +272,28 @@ int main(int argc, char* argv[]) {
             }
         }
 
+        // Check if user wants to skip or edit selection
+        std::string skip_or_edit;
+        std::cout << "Skip or edit selected operations? (S/e): ";
+        std::getline(std::cin, skip_or_edit);
+
         // Apply the edits for selected files
-        std::vector<DatedFile> files_to_edit;
-        for (const auto& index : selected_files) {
-            if (index > 0 && index <= files.size()) {
-                files[index - 1].edit_proposed_name();
+        if (skip_or_edit == "e" || skip_or_edit == "E") {
+            for (const auto& index : selected_files) {
+                if (index > 0 && index <= files.size()) {
+                    files[index - 1].edit_proposed_name();
+                }
             }
         }
+        // Skip selected files
+        else {
+            for (const auto& index : selected_files) {
+                if (index > 0 && index <= files.size()) {
+                    files[index - 1].set_skipped();
+                }
+            }
+        }
+
         std::cout << std::endl;
     }
 

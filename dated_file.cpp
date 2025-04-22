@@ -131,12 +131,14 @@ void DatedFile::edit_proposed_name() {
             std::getline(std::cin, new_name);
             this->set_proposed_name(new_name);
         }
-        else if (selected.first == "Skip") this->set_proposed_name("");
+        else if (selected.first == "Skip") this->set_skipped();
         else this->set_proposed_name(selected.second);
         
         break;
     }
 }
+
+void DatedFile::set_skipped() { this->set_proposed_name(""); }
 
 bool DatedFile::rename() {
     if (this->is_skipped()) return false;

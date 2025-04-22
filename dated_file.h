@@ -37,6 +37,7 @@ public:
     bool is_skipped() const;
     bool is_clashing() const;
     void edit_proposed_name();
+    void set_skipped();
     bool rename();
 };
 
