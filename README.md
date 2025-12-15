@@ -1,6 +1,8 @@
 # timestamp
 A tool that allows you to rename EXIF and XMP files to reflect date found in metadata. The specific tag used to extract data from the file can be changed, as can the final date format used in the file rename.
 
+Note: This project is no longer being worked on since I'm now using Immich to store my photos and have no need of timestamp.
+
 ## Installation
 ### Arch Linux
 Available on the [AUR](https://aur.archlinux.org/packages/timestamp).
